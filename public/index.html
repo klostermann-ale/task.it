@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Tarefas</title>
+  <style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #fdfbfb, #ebedee);
+    padding: 2rem;
+    color: #333;
+    max-width: 600px;
+    margin: auto;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 2.5rem;
+    color: #222;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    outline: none;
+    transition: border 0.2s;
+  }
+
+  input:focus {
+    border-color: #7b61ff;
+  }
+
+  button {
+  background: #7b61ff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+  margin-left: 0.5rem;
+  height: 100%;
+}
+
+
+  button:hover {
+    background: #5a45d6;
+  }
+
+  ul {
+    list-style: none;
+    margin-top: 1rem;
+  }
+
+  li {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s;
+  }
+
+  li:hover {
+    transform: scale(1.02);
+  }
+
+  .concluida {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .botoes {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 500px) {
+    h1 {
+      font-size: 2rem;
+    }
+    button {
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <h1>📝 Minhas Tarefas</h1>
+  <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: stretch;">
+  <input id="novaTarefa" placeholder="Digite a nova tarefa" />
+  <button onclick="adicionarTarefa()">Adicionar</button>
+</div>
+
+  <div id="mensagem" style="margin-bottom: 1rem; text-align: center; font-weight: bold;"></div>
+  <ul id="listaTarefas"></ul>
+
+  <script>
+    function mostrarMensagem(texto, cor = 'green') {
+  const div = document.getElementById('mensagem');
+  div.textContent = texto;
+  div.style.color = cor;
+
+  setTimeout(() => {
+    div.textContent = '';
+  }, 3000); 
+  }
+    async function carregarTarefas() {
+      const res = await fetch('/tasks');
+      const tarefas = await res.json();
+      const lista = document.getElementById('listaTarefas');
+      lista.innerHTML = '';
+
+      tarefas.forEach(t => {
+        const li = document.createElement('li');
+        li.textContent = t.title;
+        if (t.status === 'concluído') li.classList.add('concluida');
+
+        const concluirBtn = document.createElement('button');
+        concluirBtn.textContent = '✅';
+        concluirBtn.onclick = () => atualizarStatus(t.id);
+
+        const excluirBtn = document.createElement('button');
+        excluirBtn.textContent = '🗑️';
+        excluirBtn.onclick = () => excluirTarefa(t.id);
+
+        const botoesDiv = document.createElement('div');
+        botoesDiv.className = 'botoes';
+        botoesDiv.appendChild(concluirBtn);
+        botoesDiv.appendChild(excluirBtn);
+        li.appendChild(botoesDiv);
+        lista.appendChild(li);
+      });
+    }
+
+    async function adicionarTarefa() {
+      const input = document.getElementById('novaTarefa');
+      const title = input.value;
+      if (!title.trim()) {
+        mostrarMensagem('Por favor, digite uma tarefa válida.', 'red');
+        return;
+     }
+
+      await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      input.value = '';
+      carregarTarefas();
+      mostrarMensagem('Tarefa adicionada com sucesso!');
+    }
+
+    async function atualizarStatus(id) {
+      await fetch(`/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'concluído' })
+      });
+      carregarTarefas();
+      mostrarMensagem('Tarefa concluída!');
+    }
+
+    async function excluirTarefa(id) {
+      await fetch(`/tasks/${id}`, { method: 'DELETE' });
+      carregarTarefas();
+      mostrarMensagem('Tarefa removida!');
+    }
+
+    carregarTarefas();
+  </script>
+</body>
+</html>
